@@ -67,7 +67,6 @@ function Save-ResizedImage {
 New-Item -ItemType Directory -Force -Path (Join-Path $publicRoot 'thumbnail') | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $publicRoot 'gallery') | Out-Null
 
-Save-ResizedImage (Join-Path $sourceRoot 'heroimage.png') (Join-Path $publicRoot 'hero.png') 1600 2400 88 'png'
 Save-ResizedImage (Join-Path $sourceRoot 'heroimage.png') (Join-Path $publicRoot 'hero-poster.jpg') 1400 2200 82 'jpeg'
 Save-ResizedImage (Join-Path $sourceRoot 'aboutsectionimage.png') (Join-Path $publicRoot 'about-section-image.jpg') 1400 2200 84 'jpeg'
 

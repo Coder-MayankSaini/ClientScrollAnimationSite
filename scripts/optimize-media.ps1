@@ -20,8 +20,8 @@ function Invoke-Ffmpeg {
   }
 }
 
-$videoSource = Join-Path $projectRoot "public\videos\scroll-film\fullvideo.mp4"
-$videoDirectory = Split-Path -Parent $videoSource
+$videoSource = Join-Path $projectRoot "shorted_video.mp4"
+$videoDirectory = Join-Path $projectRoot "public\videos\scroll-film"
 
 # The film is scrubbed frame-by-frame, so keep keyframes frequent while using
 # inter-frame compression. The muted background does not need an audio stream.
@@ -62,7 +62,7 @@ $songs = @(
 foreach ($song in $songs) {
   Invoke-Ffmpeg @(
     "-y", "-hide_banner", "-loglevel", "warning",
-    "-i", (Join-Path $projectRoot ("public\music\" + $song.Source)),
+    "-i", (Join-Path $projectRoot ("music\" + $song.Source)),
     "-map", "0:a:0", "-t", "30", "-vn",
     "-c:a", "libmp3lame", "-b:a", "128k", "-ar", "44100", "-ac", "2",
     "-map_metadata", "-1",

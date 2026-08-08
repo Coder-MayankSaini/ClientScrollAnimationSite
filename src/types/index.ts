@@ -29,8 +29,6 @@ export type FilmChapter = {
   id: string;
   title: string;
   caption: string;
-  video: string;
-  duration: number;
   start: number;
   end: number;
 };

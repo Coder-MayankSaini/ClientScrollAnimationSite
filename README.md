@@ -26,22 +26,18 @@ The original assets remain in `Pictures/`. Optimized web assets are generated in
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/optimize-images.ps1
 ```
 
-To replace an image, update the source file in `Pictures/`, rerun the optimizer, and keep the public filename mapped in `src/lib/assets.ts` and the relevant data file.
+To replace an image, update the source file in `Pictures/`, rerun the optimizer, and keep the public filename mapped in the relevant data file.
 
-The supplied videos are served from `public/videos/scroll-film/` using these filenames:
+The source scroll film is `shorted_video.mp4` in the project root. The media optimizer creates the web and mobile files served from `public/videos/scroll-film/`:
 
 ```text
-01-intro-emergence.mp4
-02-haryana-roots.mp4
-03-songwriter-studio.mp4
-04-music-energy.mp4
-05-live-performance.mp4
-06-final-portrait.mp4
+fullvideo-web.mp4
+fullvideo-mobile.mp4
 ```
 
-To replace a clip, keep the same filename and restart the dev server. The scroll timeline uses the durations and chapter ranges in `src/data/filmChapters.ts`.
+To replace the film, replace `shorted_video.mp4` and run the media optimizer. The scroll timeline uses the chapter ranges in `src/data/filmChapters.ts`.
 
-The opening scroll film uses the generated `fullvideo-web.mp4` and `fullvideo-mobile.mp4` variants. Audio cards use 30-second, 128 kbps files in `public/music/previews/` instead of downloading the full songs. After replacing the source film or songs, regenerate those assets with:
+Audio source files remain in `music/`; the site serves only the generated 30-second, 128 kbps previews from `public/music/previews/`. After replacing the source film or songs, regenerate those assets with:
 
 ```text
 npm run optimize:media
@@ -70,7 +66,7 @@ npm install
 npm run build
 ```
 
-Netlify should use the build command `npm run build` and publish directory `dist`. Static images and videos are configured for immutable caching. If a media filename changes, update the data manifest or use a versioned filename so browsers receive the replacement.
+Netlify should use the build command `npm run build` and publish directory `dist`. Static images, videos, and music previews are configured for immutable caching. If a media filename changes, update the relevant data file or use a versioned filename so browsers receive the replacement.
 
 ## Frame sequence option
 
