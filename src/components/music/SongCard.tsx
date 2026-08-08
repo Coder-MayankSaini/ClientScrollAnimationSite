@@ -14,7 +14,7 @@ export function SongCard({ song, index, active, playing, onSelect }: SongCardPro
     <article className={`song-card ${active ? "song-card--active" : ""}`}>
       <button type="button" className="song-art-button" onClick={onSelect} aria-label={`${playing ? "Pause" : "Play"} ${song.title} preview`} aria-pressed={playing}>
         <span className="song-number">0{index + 1}</span>
-        <img src={song.cover} alt={`${song.title} cover artwork`} loading={index > 2 ? "lazy" : "eager"} />
+        <img src={song.cover} alt={`${song.title} cover artwork`} loading="lazy" decoding="async" />
         <span className="song-art-overlay">{playing ? <Pause size={19} fill="currentColor" aria-hidden="true" /> : <Play size={19} fill="currentColor" aria-hidden="true" />}</span>
       </button>
       <div className="song-card-content">

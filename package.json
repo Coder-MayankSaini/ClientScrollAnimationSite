@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "optimize:media": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/optimize-media.ps1"
   },
   "dependencies": {
     "firebase": "^11.8.1",

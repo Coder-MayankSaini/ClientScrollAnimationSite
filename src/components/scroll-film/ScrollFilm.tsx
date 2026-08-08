@@ -71,6 +71,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     const video = videoRef.current;
     let mounted = true;
     let lastPublishedProgress = -1;
+    let videoLoadStarted = false;
 
     const seekVideoToLatestTarget = () => {
       seekFrameRef.current = undefined;
@@ -86,9 +87,13 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
         setLoaded(true);
       }
 
-      // A new scroll target supersedes the previous one. Browsers can safely
-      // replace a pending seek, which prevents fast wheel/touch scrolling from
-      // waiting indefinitely for an old `seeked` event.
+      // Do not replace a seek that is still being decoded. Keeping only the
+      // latest target prevents a slow network/decoder from getting stuck in a
+      // never-ending sequence of cancelled seeks.
+      if (video.seeking) return;
+
+      // The latest scroll target wins once the current decode finishes, which
+      // keeps fast wheel/touch scrolling responsive without thrashing seeks.
       if (Math.abs(lastRequestedTimeRef.current - time) < 0.025) return;
       lastRequestedTimeRef.current = time;
       try {
@@ -105,6 +110,14 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       seekFrameRef.current = requestAnimationFrame(seekVideoToLatestTarget);
     };
 
+    const startVideoLoad = () => {
+      if (!mounted || videoLoadStarted) return;
+      videoLoadStarted = true;
+      video.preload = "auto";
+      video.load();
+      requestSeek();
+    };
+
     const publishProgress = (nextProgress: number) => {
       if (scrollFrameRef.current) return;
       scrollFrameRef.current = requestAnimationFrame(() => {
@@ -118,6 +131,15 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     const updateFromScroll = () => {
       const scrollDistance = Math.max(1, root.offsetHeight - window.innerHeight);
       targetProgressRef.current = Math.max(0, Math.min(1, -root.getBoundingClientRect().top / scrollDistance));
+    };
+
+    const onWindowScroll = () => {
+      startVideoLoad();
+      updateFromScroll();
+    };
+
+    const onVideoIntent = () => {
+      startVideoLoad();
     };
 
     const syncScrollPosition = () => {
@@ -176,7 +198,9 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     video.addEventListener("loadeddata", onLoadedData);
     video.addEventListener("canplay", onCanPlay);
     video.addEventListener("seeked", onSeeked);
-    window.addEventListener("scroll", updateFromScroll, { passive: true });
+    window.addEventListener("scroll", onWindowScroll, { passive: true });
+    root.addEventListener("pointerdown", onVideoIntent, { passive: true, once: true });
+    const deferredLoadId = window.setTimeout(startVideoLoad, 1800);
     window.addEventListener("resize", resize);
     requestSeek();
     updateFromScroll();
@@ -189,13 +213,15 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       if (syncFrameRef.current) { cancelAnimationFrame(syncFrameRef.current); syncFrameRef.current = undefined; }
       if (scrollFrameRef.current) { cancelAnimationFrame(scrollFrameRef.current); scrollFrameRef.current = undefined; }
       if (seekFrameRef.current) { cancelAnimationFrame(seekFrameRef.current); seekFrameRef.current = undefined; }
+      window.clearTimeout(deferredLoadId);
       video.pause();
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("error", onError);
       video.removeEventListener("loadeddata", onLoadedData);
       video.removeEventListener("canplay", onCanPlay);
       video.removeEventListener("seeked", onSeeked);
-      window.removeEventListener("scroll", updateFromScroll);
+      window.removeEventListener("scroll", onWindowScroll);
+      root.removeEventListener("pointerdown", onVideoIntent);
       window.removeEventListener("resize", resize);
     };
   }, [onProgress, reducedMotion]);
@@ -206,7 +232,10 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
         <img className="film-poster" src="/pictures/hero-poster.jpg" alt="" aria-hidden="true" />
-        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} src="/videos/scroll-film/fullvideo.mp4" muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
+        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="none" poster="/pictures/hero-poster.jpg" aria-hidden="true">
+          <source media="(max-width: 620px)" src="/videos/scroll-film/fullvideo-mobile.mp4" type="video/mp4" />
+          <source src="/videos/scroll-film/fullvideo-web.mp4" type="video/mp4" />
+        </video>
         <div className="film-vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
         <div className="film-chapter-marker" aria-hidden="true"><span>0{filmChapters.indexOf(chapter) + 1}</span><i /></div>

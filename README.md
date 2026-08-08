@@ -41,6 +41,12 @@ The supplied videos are served from `public/videos/scroll-film/` using these fil
 
 To replace a clip, keep the same filename and restart the dev server. The scroll timeline uses the durations and chapter ranges in `src/data/filmChapters.ts`.
 
+The opening scroll film uses the generated `fullvideo-web.mp4` and `fullvideo-mobile.mp4` variants. Audio cards use 30-second, 128 kbps files in `public/music/previews/` instead of downloading the full songs. After replacing the source film or songs, regenerate those assets with:
+
+```text
+npm run optimize:media
+```
+
 ## Songs and gallery
 
 Song metadata is centralized in `src/data/songs.ts`. Add a song object with its optimized cover path and streaming URLs. Audio previews can be added through `audioPreview`; the interface is prepared to keep one preview active at a time, but no preview autoplays.
