@@ -54,14 +54,13 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const syncFrameRef = useRef<number>();
   const scrollFrameRef = useRef<number>();
   const seekFrameRef = useRef<number>();
   const targetProgressRef = useRef(0);
   const activeChapterRef = useRef(0);
   const lastRequestedTimeRef = useRef(-1);
-  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const [progress, setProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -73,46 +72,12 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   }, [onProgress, progress]);
 
   useEffect(() => {
-    if (reducedMotion || !rootRef.current || !stageRef.current || !canvasRef.current || !videoRef.current) return;
+    if (reducedMotion || !rootRef.current || !stageRef.current || !videoRef.current) return;
 
     const root = rootRef.current;
-    const canvas = canvasRef.current;
     const video = videoRef.current;
     let mounted = true;
-
-    const drawFrame = () => {
-      const context = contextRef.current ?? canvas.getContext("2d");
-      contextRef.current = context;
-      if (!context || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || video.videoWidth === 0 || video.videoHeight === 0) return false;
-      const bounds = canvas.getBoundingClientRect();
-      if (bounds.width === 0 || bounds.height === 0) return false;
-      const compactViewport = window.matchMedia("(max-width: 620px)").matches;
-      const lowPowerDevice = window.navigator.hardwareConcurrency > 0 && window.navigator.hardwareConcurrency <= 4;
-      const dpr = Math.min(window.devicePixelRatio || 1, compactViewport || lowPowerDevice ? 1 : 1.45);
-      const width = Math.max(1, Math.round(bounds.width * dpr));
-      const height = Math.max(1, Math.round(bounds.height * dpr));
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-      }
-      context.fillStyle = "#050403";
-      context.fillRect(0, 0, width, height);
-      // Desktop preserves the full frame; mobile uses a centered portrait-safe crop.
-      const scale = compactViewport
-        ? Math.max(width / video.videoWidth, height / video.videoHeight)
-        : Math.min(width / video.videoWidth, height / video.videoHeight);
-      const drawWidth = video.videoWidth * scale;
-      const drawHeight = video.videoHeight * scale;
-      const x = (width - drawWidth) / 2;
-      const y = (height - drawHeight) / 2;
-      try {
-        context.drawImage(video, x, y, drawWidth, drawHeight);
-      } catch {
-        return false;
-      }
-      setLoaded(true);
-      return true;
-    };
+    let lastPublishedProgress = -1;
 
     const seekVideoToLatestTarget = () => {
       seekFrameRef.current = undefined;
@@ -167,52 +132,67 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     const updateFromScroll = () => {
       const scrollDistance = Math.max(1, root.offsetHeight - window.innerHeight);
       const nextProgress = Math.max(0, Math.min(1, -root.getBoundingClientRect().top / scrollDistance));
-      publishProgress(nextProgress);
+      if (lastPublishedProgress < 0 || Math.abs(lastPublishedProgress - nextProgress) > 0.0001) {
+        lastPublishedProgress = nextProgress;
+        publishProgress(nextProgress);
+      }
       requestSeek();
+    };
+
+    const syncScrollPosition = () => {
+      if (!mounted) return;
+      updateFromScroll();
+      syncFrameRef.current = requestAnimationFrame(syncScrollPosition);
     };
 
     const resize = () => {
       updateFromScroll();
-      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) drawFrame();
     };
     const onLoadedMetadata = () => {
       if (!mounted) return;
       video.pause();
       lastRequestedTimeRef.current = -1;
       requestSeek();
+
+      // Starting a muted inline video briefly warms the decoder on Safari and
+      // some Android browsers. Without this, a paused video can accept
+      // currentTime changes but keep displaying its poster/first decoded frame.
+      void video.play().then(() => {
+        video.pause();
+        requestSeek();
+      }).catch(() => {
+        requestSeek();
+      });
     };
     const onSeeked = () => {
       if (!mounted) return;
-      drawFrame();
       requestSeek();
     };
     const onError = () => {
       if (mounted) setVideoError(true);
     };
     const onLoadedData = () => {
-      drawFrame();
+      setLoaded(true);
       requestSeek();
     };
     const onCanPlay = () => {
-      drawFrame();
+      setLoaded(true);
       requestSeek();
-    };
-    const onTimeUpdate = () => {
-      if (!video.seeking) drawFrame();
     };
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     video.addEventListener("error", onError);
     video.addEventListener("loadeddata", onLoadedData);
     video.addEventListener("canplay", onCanPlay);
     video.addEventListener("seeked", onSeeked);
-    video.addEventListener("timeupdate", onTimeUpdate);
     window.addEventListener("scroll", updateFromScroll, { passive: true });
     window.addEventListener("resize", resize);
     requestSeek();
     updateFromScroll();
+    syncFrameRef.current = requestAnimationFrame(syncScrollPosition);
 
     return () => {
       mounted = false;
+      if (syncFrameRef.current) cancelAnimationFrame(syncFrameRef.current);
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
       if (seekFrameRef.current) cancelAnimationFrame(seekFrameRef.current);
       video.pause();
@@ -221,7 +201,6 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       video.removeEventListener("loadeddata", onLoadedData);
       video.removeEventListener("canplay", onCanPlay);
       video.removeEventListener("seeked", onSeeked);
-      video.removeEventListener("timeupdate", onTimeUpdate);
       window.removeEventListener("scroll", updateFromScroll);
       window.removeEventListener("resize", resize);
     };
@@ -233,8 +212,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
         <img className="film-poster" src="/pictures/hero-poster.jpg" alt="" aria-hidden="true" />
-        <video ref={videoRef} className="film-video-source" src={filmChapters[0].video} muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
-        <canvas ref={canvasRef} className={`film-canvas${loaded ? " film-canvas--ready" : ""}`} aria-label="Cinematic visual sequence of Mohit Ladhotiya" role="img" />
+        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} src={filmChapters[0].video} muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
         <div className="film-vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
         <div className="film-chapter-marker" aria-hidden="true"><span>0{filmChapters.indexOf(chapter) + 1}</span><i /></div>
