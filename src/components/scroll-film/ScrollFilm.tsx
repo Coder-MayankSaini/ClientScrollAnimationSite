@@ -59,7 +59,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   const scrollFrameRef = useRef<number>();
   const seekFrameRef = useRef<number>();
   const targetProgressRef = useRef(0);
-  const activeChapterRef = useRef(0);
+  const activeChapterRef = useRef(-1);
   const lastRequestedTimeRef = useRef(-1);
   const [progress, setProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -98,6 +98,10 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       }
 
       if (video.readyState < HTMLMediaElement.HAVE_METADATA) return;
+
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        setLoaded(true);
+      }
 
       // A new scroll target supersedes the previous one. Browsers can safely
       // replace a pending seek, which prevents fast wheel/touch scrolling from
@@ -192,9 +196,9 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
 
     return () => {
       mounted = false;
-      if (syncFrameRef.current) cancelAnimationFrame(syncFrameRef.current);
-      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
-      if (seekFrameRef.current) cancelAnimationFrame(seekFrameRef.current);
+      if (syncFrameRef.current) { cancelAnimationFrame(syncFrameRef.current); syncFrameRef.current = undefined; }
+      if (scrollFrameRef.current) { cancelAnimationFrame(scrollFrameRef.current); scrollFrameRef.current = undefined; }
+      if (seekFrameRef.current) { cancelAnimationFrame(seekFrameRef.current); seekFrameRef.current = undefined; }
       video.pause();
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("error", onError);
@@ -212,7 +216,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
         <img className="film-poster" src="/pictures/hero-poster.jpg" alt="" aria-hidden="true" />
-        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} src={filmChapters[0].video} muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
+        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
         <div className="film-vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
         <div className="film-chapter-marker" aria-hidden="true"><span>0{filmChapters.indexOf(chapter) + 1}</span><i /></div>

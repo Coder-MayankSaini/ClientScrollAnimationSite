@@ -14,14 +14,16 @@ export function MusicCatalog() {
     audioRef.current = null;
   }, []);
 
-  const moveActive = (direction: number) => {
-    setActiveSong((current) => (current + direction + songs.length) % songs.length);
+  const scrollToSong = (index: number) => {
+    const active = trackRef.current?.querySelector<HTMLElement>(`[data-song-index="${index}"]`);
+    active?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   };
 
-  useEffect(() => {
-    const active = trackRef.current?.querySelector<HTMLElement>(`[data-song-index="${activeSong}"]`);
-    active?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  }, [activeSong]);
+  const moveActive = (direction: number) => {
+    const nextSong = (activeSong + direction + songs.length) % songs.length;
+    setActiveSong(nextSong);
+    scrollToSong(nextSong);
+  };
 
   return (
     <section className="music-section section-band" id="music" data-section="music" aria-labelledby="music-title">
@@ -57,7 +59,7 @@ export function MusicCatalog() {
         >
           {songs.map((song, index) => (
             <div data-song-index={index} key={song.id}>
-              <SongCard song={song} index={index} active={index === activeSong} onSelect={() => setActiveSong(index)} />
+              <SongCard song={song} index={index} active={index === activeSong} onSelect={() => { setActiveSong(index); scrollToSong(index); }} />
             </div>
           ))}
         </div>
