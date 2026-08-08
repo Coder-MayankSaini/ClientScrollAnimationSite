@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { artist } from "../../data/artist";
 import { filmChapters } from "../../data/filmChapters";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-
-gsap.registerPlugin(ScrollTrigger);
 
 type ScrollFilmProps = {
   onProgress?: (progress: number) => void;
@@ -16,12 +12,13 @@ function getChapter(progress: number) {
   return filmChapters.find((chapter) => progress >= chapter.start && progress <= chapter.end) ?? filmChapters[filmChapters.length - 1];
 }
 
-function getSeekTarget(progress: number) {
+function getSeekTarget(progress: number, duration: number) {
   const chapter = getChapter(progress);
   const chapterIndex = filmChapters.indexOf(chapter);
   const chapterRange = chapter.end - chapter.start;
   const localProgress = Math.max(0, Math.min(1, (progress - chapter.start) / chapterRange));
-  const time = Math.max(0, Math.min(chapter.duration - 0.05, localProgress * chapter.duration));
+  const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : chapter.duration;
+  const time = Math.max(0, Math.min(Math.max(0, safeDuration - 0.05), localProgress * safeDuration));
   return { chapter, chapterIndex, time };
 }
 
@@ -59,12 +56,12 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const scrollFrameRef = useRef<number>();
   const seekFrameRef = useRef<number>();
-  const progressFrameRef = useRef<number>();
   const targetProgressRef = useRef(0);
-  const activeChapterRef = useRef(-1);
-  const pendingTimeRef = useRef<number | null>(null);
-  const seekInFlightRef = useRef(false);
+  const activeChapterRef = useRef(0);
+  const lastRequestedTimeRef = useRef(-1);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const [progress, setProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -84,7 +81,8 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     let mounted = true;
 
     const drawFrame = () => {
-      const context = canvas.getContext("2d");
+      const context = contextRef.current ?? canvas.getContext("2d");
+      contextRef.current = context;
       if (!context || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || video.videoWidth === 0 || video.videoHeight === 0) return false;
       const bounds = canvas.getBoundingClientRect();
       if (bounds.width === 0 || bounds.height === 0) return false;
@@ -116,83 +114,88 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       return true;
     };
 
-    const scheduleSeek = () => {
-      if (seekFrameRef.current) return;
-      seekFrameRef.current = requestAnimationFrame(() => {
-        seekFrameRef.current = undefined;
-        seekVideoToLatestTarget();
-      });
-    };
-
     const seekVideoToLatestTarget = () => {
-      const { chapter, chapterIndex, time } = getSeekTarget(targetProgressRef.current);
+      seekFrameRef.current = undefined;
+      if (!mounted) return;
+
+      const { chapter, chapterIndex, time } = getSeekTarget(
+        targetProgressRef.current,
+        video.duration
+      );
 
       if (activeChapterRef.current !== chapterIndex) {
         activeChapterRef.current = chapterIndex;
-        pendingTimeRef.current = time;
-        seekInFlightRef.current = false;
+        lastRequestedTimeRef.current = -1;
         setVideoError(false);
         video.src = chapter.video;
         video.load();
         return;
       }
 
-      pendingTimeRef.current = time;
-      if (video.readyState < 2 || seekInFlightRef.current || video.seeking) return;
+      if (video.readyState < HTMLMediaElement.HAVE_METADATA) return;
 
-      const nextTime = pendingTimeRef.current;
-      if (nextTime === null) return;
-      pendingTimeRef.current = null;
-      if (Math.abs(video.currentTime - nextTime) < 0.035) {
-        drawFrame();
-        return;
+      // A new scroll target supersedes the previous one. Browsers can safely
+      // replace a pending seek, which prevents fast wheel/touch scrolling from
+      // waiting indefinitely for an old `seeked` event.
+      if (Math.abs(lastRequestedTimeRef.current - time) < 0.025) return;
+      lastRequestedTimeRef.current = time;
+      try {
+        video.currentTime = time;
+      } catch {
+        // The source may have changed between the readyState check and the
+        // assignment. The next scroll frame will retry with the latest target.
+        lastRequestedTimeRef.current = -1;
       }
-
-      seekInFlightRef.current = true;
-      video.currentTime = nextTime;
     };
 
-    const requestSeek = (nextProgress: number) => {
-      targetProgressRef.current = nextProgress;
-      scheduleSeek();
+    const requestSeek = () => {
+      if (seekFrameRef.current) return;
+      seekFrameRef.current = requestAnimationFrame(seekVideoToLatestTarget);
     };
 
     const publishProgress = (nextProgress: number) => {
       targetProgressRef.current = nextProgress;
-      if (progressFrameRef.current) return;
-      progressFrameRef.current = requestAnimationFrame(() => {
-        progressFrameRef.current = undefined;
+      if (scrollFrameRef.current) return;
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        scrollFrameRef.current = undefined;
+        if (!mounted) return;
         setProgress(targetProgressRef.current);
         onProgress?.(targetProgressRef.current);
       });
     };
 
+    const updateFromScroll = () => {
+      const scrollDistance = Math.max(1, root.offsetHeight - window.innerHeight);
+      const nextProgress = Math.max(0, Math.min(1, -root.getBoundingClientRect().top / scrollDistance));
+      publishProgress(nextProgress);
+      requestSeek();
+    };
+
     const resize = () => {
-      if (video.readyState >= 2) drawFrame();
+      updateFromScroll();
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) drawFrame();
     };
     const onLoadedMetadata = () => {
       if (!mounted) return;
       video.pause();
-      pendingTimeRef.current = getSeekTarget(targetProgressRef.current).time;
-      scheduleSeek();
+      lastRequestedTimeRef.current = -1;
+      requestSeek();
     };
     const onSeeked = () => {
       if (!mounted) return;
-      seekInFlightRef.current = false;
       drawFrame();
-      const latest = getSeekTarget(targetProgressRef.current);
-      if (latest.chapterIndex !== activeChapterRef.current || pendingTimeRef.current !== null) scheduleSeek();
+      requestSeek();
     };
     const onError = () => {
       if (mounted) setVideoError(true);
     };
     const onLoadedData = () => {
       drawFrame();
-      scheduleSeek();
+      requestSeek();
     };
     const onCanPlay = () => {
       drawFrame();
-      scheduleSeek();
+      requestSeek();
     };
     const onTimeUpdate = () => {
       if (!video.seeking) drawFrame();
@@ -203,35 +206,15 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     video.addEventListener("canplay", onCanPlay);
     video.addEventListener("seeked", onSeeked);
     video.addEventListener("timeupdate", onTimeUpdate);
+    window.addEventListener("scroll", updateFromScroll, { passive: true });
     window.addEventListener("resize", resize);
-    requestSeek(0);
-
-    const context = gsap.context(() => {
-      ScrollTrigger.create({
-        trigger: root,
-        start: "top top",
-        end: "bottom bottom",
-        pin: stageRef.current,
-        scrub: window.matchMedia("(max-width: 620px)").matches ? 0.6 : 0.32,
-        anticipatePin: 1,
-        fastScrollEnd: true,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          publishProgress(self.progress);
-          requestSeek(self.progress);
-        },
-        onRefresh: (self) => {
-          publishProgress(self.progress);
-          requestSeek(self.progress);
-        }
-      });
-    }, root);
+    requestSeek();
+    updateFromScroll();
 
     return () => {
       mounted = false;
-      context.revert();
+      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
       if (seekFrameRef.current) cancelAnimationFrame(seekFrameRef.current);
-      if (progressFrameRef.current) cancelAnimationFrame(progressFrameRef.current);
       video.pause();
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("error", onError);
@@ -239,6 +222,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       video.removeEventListener("canplay", onCanPlay);
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("timeupdate", onTimeUpdate);
+      window.removeEventListener("scroll", updateFromScroll);
       window.removeEventListener("resize", resize);
     };
   }, [onProgress, reducedMotion]);
@@ -249,7 +233,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
         <img className="film-poster" src="/pictures/hero-poster.jpg" alt="" aria-hidden="true" />
-        <video ref={videoRef} className="film-video-source" muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
+        <video ref={videoRef} className="film-video-source" src={filmChapters[0].video} muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
         <canvas ref={canvasRef} className={`film-canvas${loaded ? " film-canvas--ready" : ""}`} aria-label="Cinematic visual sequence of Mohit Ladhotiya" role="img" />
         <div className="film-vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
