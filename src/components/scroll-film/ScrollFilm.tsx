@@ -77,7 +77,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       if (!mounted) return;
 
       const progress = currentProgressRef.current;
-      const safeDuration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 15.167;
+      const safeDuration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 13.667;
       const time = Math.max(0, Math.min(Math.max(0, safeDuration - 0.05), progress * safeDuration));
 
       if (video.readyState < HTMLMediaElement.HAVE_METADATA) return;
