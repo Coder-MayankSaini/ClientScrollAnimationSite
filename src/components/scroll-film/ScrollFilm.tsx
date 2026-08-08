@@ -51,6 +51,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   const scrollFrameRef = useRef<number>();
   const seekFrameRef = useRef<number>();
   const targetProgressRef = useRef(0);
+  const currentProgressRef = useRef(0);
 
   const lastRequestedTimeRef = useRef(-1);
   const [progress, setProgress] = useState(0);
@@ -75,7 +76,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       seekFrameRef.current = undefined;
       if (!mounted) return;
 
-      const progress = targetProgressRef.current;
+      const progress = currentProgressRef.current;
       const safeDuration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 15.167;
       const time = Math.max(0, Math.min(Math.max(0, safeDuration - 0.05), progress * safeDuration));
 
@@ -105,29 +106,34 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     };
 
     const publishProgress = (nextProgress: number) => {
-      targetProgressRef.current = nextProgress;
       if (scrollFrameRef.current) return;
       scrollFrameRef.current = requestAnimationFrame(() => {
         scrollFrameRef.current = undefined;
         if (!mounted) return;
-        setProgress(targetProgressRef.current);
-        onProgress?.(targetProgressRef.current);
+        setProgress(nextProgress);
+        onProgress?.(nextProgress);
       });
     };
 
     const updateFromScroll = () => {
       const scrollDistance = Math.max(1, root.offsetHeight - window.innerHeight);
-      const nextProgress = Math.max(0, Math.min(1, -root.getBoundingClientRect().top / scrollDistance));
-      if (lastPublishedProgress < 0 || Math.abs(lastPublishedProgress - nextProgress) > 0.0001) {
-        lastPublishedProgress = nextProgress;
-        publishProgress(nextProgress);
-      }
-      requestSeek();
+      targetProgressRef.current = Math.max(0, Math.min(1, -root.getBoundingClientRect().top / scrollDistance));
     };
 
     const syncScrollPosition = () => {
       if (!mounted) return;
-      updateFromScroll();
+      
+      const diff = targetProgressRef.current - currentProgressRef.current;
+      if (Math.abs(diff) > 0.0001) {
+        currentProgressRef.current += diff * 0.08; // The "shock absorber" (Lerp) factor
+        
+        if (lastPublishedProgress < 0 || Math.abs(lastPublishedProgress - currentProgressRef.current) > 0.0001) {
+          lastPublishedProgress = currentProgressRef.current;
+          publishProgress(currentProgressRef.current);
+        }
+        requestSeek();
+      }
+
       syncFrameRef.current = requestAnimationFrame(syncScrollPosition);
     };
 
@@ -174,6 +180,8 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     window.addEventListener("resize", resize);
     requestSeek();
     updateFromScroll();
+    currentProgressRef.current = targetProgressRef.current;
+    publishProgress(currentProgressRef.current);
     syncFrameRef.current = requestAnimationFrame(syncScrollPosition);
 
     return () => {
