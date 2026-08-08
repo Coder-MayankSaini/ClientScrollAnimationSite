@@ -18,7 +18,7 @@ function StaticHero() {
   return (
     <section className="film-scroll film-scroll--static" id="home" data-section="home" aria-labelledby="hero-title">
       <div className="film-stage film-stage--static">
-        <img className="static-hero-image" src="/pictures/hero-poster.jpg" alt="Mohit Ladhotiya in a dark jacket" />
+        <img className="static-hero-image" src="/videos/scroll-film/fullvideo-poster.jpg" alt="Mohit Ladhotiya in a dark jacket" />
         <div className="film-vignette" aria-hidden="true" />
         <HeroCopy />
       </div>
@@ -231,8 +231,8 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   return (
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
-        <img className="film-poster" src="/pictures/hero-poster.jpg" alt="" aria-hidden="true" />
-        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="none" poster="/pictures/hero-poster.jpg" aria-hidden="true">
+        <img className="film-poster" src="/videos/scroll-film/fullvideo-poster.jpg" alt="" aria-hidden="true" />
+        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="none" poster="/videos/scroll-film/fullvideo-poster.jpg" aria-hidden="true">
           <source media="(max-width: 620px)" src="/videos/scroll-film/fullvideo-mobile.mp4" type="video/mp4" />
           <source src="/videos/scroll-film/fullvideo-web.mp4" type="video/mp4" />
         </video>

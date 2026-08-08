@@ -47,6 +47,14 @@ Invoke-Ffmpeg @(
   (Join-Path $videoDirectory "fullvideo-mobile.mp4")
 )
 
+Invoke-Ffmpeg @(
+  "-y", "-hide_banner", "-loglevel", "warning",
+  "-i", $videoSource,
+  "-vf", "scale=1280:-2:force_original_aspect_ratio=decrease",
+  "-frames:v", "1", "-q:v", "2", "-an", "-map_metadata", "-1",
+  (Join-Path $videoDirectory "fullvideo-poster.jpg")
+)
+
 $previewDirectory = Join-Path $projectRoot "public\music\previews"
 New-Item -ItemType Directory -Force -Path $previewDirectory | Out-Null
 
