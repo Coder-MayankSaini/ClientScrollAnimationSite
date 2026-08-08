@@ -12,15 +12,7 @@ function getChapter(progress: number) {
   return filmChapters.find((chapter) => progress >= chapter.start && progress <= chapter.end) ?? filmChapters[filmChapters.length - 1];
 }
 
-function getSeekTarget(progress: number, duration: number) {
-  const chapter = getChapter(progress);
-  const chapterIndex = filmChapters.indexOf(chapter);
-  const chapterRange = chapter.end - chapter.start;
-  const localProgress = Math.max(0, Math.min(1, (progress - chapter.start) / chapterRange));
-  const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : chapter.duration;
-  const time = Math.max(0, Math.min(Math.max(0, safeDuration - 0.05), localProgress * safeDuration));
-  return { chapter, chapterIndex, time };
-}
+
 
 function StaticHero() {
   return (
@@ -59,7 +51,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   const scrollFrameRef = useRef<number>();
   const seekFrameRef = useRef<number>();
   const targetProgressRef = useRef(0);
-  const activeChapterRef = useRef(-1);
+
   const lastRequestedTimeRef = useRef(-1);
   const [progress, setProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -83,19 +75,9 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       seekFrameRef.current = undefined;
       if (!mounted) return;
 
-      const { chapter, chapterIndex, time } = getSeekTarget(
-        targetProgressRef.current,
-        video.duration
-      );
-
-      if (activeChapterRef.current !== chapterIndex) {
-        activeChapterRef.current = chapterIndex;
-        lastRequestedTimeRef.current = -1;
-        setVideoError(false);
-        video.src = chapter.video;
-        video.load();
-        return;
-      }
+      const progress = targetProgressRef.current;
+      const safeDuration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 15.167;
+      const time = Math.max(0, Math.min(Math.max(0, safeDuration - 0.05), progress * safeDuration));
 
       if (video.readyState < HTMLMediaElement.HAVE_METADATA) return;
 
@@ -216,7 +198,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
         <img className="film-poster" src="/pictures/hero-poster.jpg" alt="" aria-hidden="true" />
-        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
+        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} src="/videos/scroll-film/fullvideo.mp4" muted playsInline preload="auto" poster="/pictures/hero-poster.jpg" aria-hidden="true" />
         <div className="film-vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
         <div className="film-chapter-marker" aria-hidden="true"><span>0{filmChapters.indexOf(chapter) + 1}</span><i /></div>
