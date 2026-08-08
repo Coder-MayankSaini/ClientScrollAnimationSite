@@ -1,20 +1,21 @@
-import { Apple, ExternalLink, Music2, Play, Youtube } from "lucide-react";
+import { Apple, ExternalLink, Music2, Pause, Play, Youtube } from "lucide-react";
 import type { Song } from "../../types";
 
 type SongCardProps = {
   song: Song;
   index: number;
   active: boolean;
+  playing: boolean;
   onSelect: () => void;
 };
 
-export function SongCard({ song, index, active, onSelect }: SongCardProps) {
+export function SongCard({ song, index, active, playing, onSelect }: SongCardProps) {
   return (
     <article className={`song-card ${active ? "song-card--active" : ""}`}>
-      <button type="button" className="song-art-button" onClick={onSelect} aria-label={`Select ${song.title}`} aria-pressed={active}>
+      <button type="button" className="song-art-button" onClick={onSelect} aria-label={`${playing ? "Pause" : "Play"} ${song.title} preview`} aria-pressed={playing}>
         <span className="song-number">0{index + 1}</span>
         <img src={song.cover} alt={`${song.title} cover artwork`} loading={index > 2 ? "lazy" : "eager"} />
-        <span className="song-art-overlay"><Play size={19} fill="currentColor" aria-hidden="true" /></span>
+        <span className="song-art-overlay">{playing ? <Pause size={19} fill="currentColor" aria-hidden="true" /> : <Play size={19} fill="currentColor" aria-hidden="true" />}</span>
       </button>
       <div className="song-card-content">
         <div>
