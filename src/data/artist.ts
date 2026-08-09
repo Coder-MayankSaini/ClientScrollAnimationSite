@@ -4,7 +4,7 @@ export const artist = {
   name: "Mohit Ladhotiya",
   descriptor: "Haryanvi Singer · Composer · Lyricist",
   tagline: "Rooted in Haryana. Built for a new sound.",
-  statistic: "100M+",
+  statistic: "150M+",
   statisticLabel: "Listens Across All Platforms",
   email: "mohitladhotiya2004@gmail.com",
   description:
