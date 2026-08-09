@@ -12,6 +12,23 @@ function getChapter(progress: number) {
   return filmChapters.find((chapter) => progress >= chapter.start && progress <= chapter.end) ?? filmChapters[filmChapters.length - 1];
 }
 
+function useIsMobileFilm() {
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== "undefined" && window.matchMedia("(max-width: 620px)").matches
+  ));
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 620px)");
+    const update = () => setIsMobile(query.matches);
+
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  return isMobile;
+}
+
 
 
 function StaticHero() {
@@ -42,8 +59,90 @@ function HeroCopy() {
   );
 }
 
+function MobileFilm({ onProgress }: ScrollFilmProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let mounted = true;
+    const tryToPlay = () => {
+      if (!mounted) return;
+      void video.play().catch(() => {
+        // Muted autoplay is supported by current mobile browsers. If a
+        // browser still blocks it, the poster remains visible as a fallback.
+      });
+    };
+    const onLoaded = () => {
+      if (mounted) setLoaded(true);
+      tryToPlay();
+    };
+    const onEnded = () => {
+      if (!mounted) return;
+
+      // Keep the final decoded frame visible instead of allowing the element
+      // to fall back to its poster after the one-shot playback completes.
+      video.pause();
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        video.currentTime = Math.max(0, video.duration - 0.01);
+      }
+      onProgress?.(1);
+    };
+    const onError = () => {
+      if (mounted) setVideoError(true);
+    };
+
+    video.addEventListener("loadedmetadata", tryToPlay);
+    video.addEventListener("loadeddata", onLoaded);
+    video.addEventListener("canplay", onLoaded);
+    video.addEventListener("ended", onEnded);
+    video.addEventListener("error", onError);
+    tryToPlay();
+
+    return () => {
+      mounted = false;
+      video.pause();
+      video.removeEventListener("loadedmetadata", tryToPlay);
+      video.removeEventListener("loadeddata", onLoaded);
+      video.removeEventListener("canplay", onLoaded);
+      video.removeEventListener("ended", onEnded);
+      video.removeEventListener("error", onError);
+    };
+  }, [onProgress]);
+
+  return (
+    <section className="film-scroll film-scroll--mobile" id="home" data-section="home" aria-labelledby="hero-title">
+      <div className="film-stage film-stage--mobile">
+        <img className="film-poster" src="/videos/scroll-film/fullvideo-poster.jpg" alt="" aria-hidden="true" />
+        <video
+          ref={videoRef}
+          className={`film-video-source film-video-source--mobile${loaded ? " film-video-source--ready" : ""}`}
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          poster="/videos/scroll-film/fullvideo-poster.jpg"
+          aria-hidden="true"
+        >
+          <source src="/videos/scroll-film/fullvideo-mobile.mp4" type="video/mp4" />
+        </video>
+        <div className="film-vignette" aria-hidden="true" />
+        <div className="film-grain" aria-hidden="true" />
+        <HeroCopy />
+        <div className="scroll-cue" aria-hidden="true"><span>Scroll to enter</span><ArrowDown size={15} /></div>
+        {!loaded && !videoError && <div className="film-loader"><span className="loader-dot" /> Loading the film</div>}
+        {videoError && <div className="film-fallback-note">The film is unavailable on this device. The portrait remains available below.</div>}
+      </div>
+    </section>
+  );
+}
+
 export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   const reducedMotion = useReducedMotion();
+  const isMobile = useIsMobileFilm();
   const rootRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -65,7 +164,7 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   }, [onProgress, progress]);
 
   useEffect(() => {
-    if (reducedMotion || !rootRef.current || !stageRef.current || !videoRef.current) return;
+    if (reducedMotion || isMobile || !rootRef.current || !stageRef.current || !videoRef.current) return;
 
     const root = rootRef.current;
     const video = videoRef.current;
@@ -224,16 +323,16 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
       root.removeEventListener("pointerdown", onVideoIntent);
       window.removeEventListener("resize", resize);
     };
-  }, [onProgress, reducedMotion]);
+  }, [onProgress, reducedMotion, isMobile]);
 
   if (reducedMotion) return <StaticHero />;
+  if (isMobile) return <MobileFilm onProgress={onProgress} />;
 
   return (
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
         <img className="film-poster" src="/videos/scroll-film/fullvideo-poster.jpg" alt="" aria-hidden="true" />
         <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="none" poster="/videos/scroll-film/fullvideo-poster.jpg" aria-hidden="true">
-          <source media="(max-width: 620px)" src="/videos/scroll-film/fullvideo-mobile.mp4" type="video/mp4" />
           <source src="/videos/scroll-film/fullvideo-web.mp4" type="video/mp4" />
         </video>
         <div className="film-vignette" aria-hidden="true" />

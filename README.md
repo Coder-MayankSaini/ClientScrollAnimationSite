@@ -1,6 +1,6 @@
 # Mohit Ladhotiya cinematic site
 
-Production-ready React/Vite artist website for Mohit Ladhotiya. The opening section uses the supplied Google Flow clips as scroll-controlled video frames, with a static portrait fallback for reduced motion and devices that cannot seek video.
+Production-ready React/Vite artist website for Mohit Ladhotiya. The opening section uses the supplied Google Flow clips as scroll-controlled video frames on laptop-sized screens. On mobile, the optimized clip plays once automatically and holds on its final frame, with a static portrait fallback for reduced motion.
 
 ## Local development
 
