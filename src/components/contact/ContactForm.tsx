@@ -57,10 +57,7 @@ export function ContactForm() {
               <label>Event date <span className="optional">Optional</span><input type="date" {...register("eventDate")} /></label>
               <label>Event location <span className="optional">Optional</span><input {...register("eventLocation")} /></label>
             </div>
-            <div className="form-grid form-grid--two">
-              <label>Budget range <span className="optional">Optional</span><select {...register("budgetRange")}><option value="">Prefer not to say</option><option>Under ₹50,000</option><option>₹50,000 – ₹1,00,000</option><option>₹1,00,000 – ₹2,50,000</option><option>₹2,50,000+</option></select></label>
-              <label>Subject <span className="optional">Optional</span><input {...register("subject")} /></label>
-            </div>
+            <label>Subject <span className="optional">Optional</span><input {...register("subject")} /></label>
             <label>Message <textarea rows={5} {...register("message", { required: "Please add a short message." })} />{errors.message && <small>{errors.message.message}</small>}</label>
             <label className="honeypot" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" {...register("website")} /></label>
             <label className="consent-label"><input type="checkbox" {...register("consent", { required: "Please confirm before continuing." })} /><span>I confirm that this enquiry can be shared with Mohit Ladhotiya for a reply.</span></label>

@@ -5,7 +5,6 @@ export type EnquiryFormValues = {
   enquiryType: string;
   eventDate?: string;
   eventLocation?: string;
-  budgetRange?: string;
   subject?: string;
   message: string;
   consent: boolean;
@@ -21,7 +20,6 @@ export function buildEnquiryEmail(values: EnquiryFormValues, recipient: string) 
     ["Enquiry type", values.enquiryType],
     ["Event date", values.eventDate],
     ["Event location", values.eventLocation],
-    ["Budget range", values.budgetRange],
     ["Subject", values.subject],
     ["Message", values.message]
   ] as const;
