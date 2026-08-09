@@ -31,9 +31,9 @@ To replace an image, update the source file in `Pictures/`, rerun the optimizer,
 The source scroll film is `shorted_video.mp4` in the project root. The media optimizer creates the web, mobile, and first-frame poster files served from `public/videos/scroll-film/`:
 
 ```text
-fullvideo-web.mp4
-fullvideo-mobile.mp4
-fullvideo-poster.jpg
+fullvideo-web-v2.mp4
+fullvideo-mobile-v2.mp4
+fullvideo-poster-v2.jpg
 ```
 
 To replace the film, replace `shorted_video.mp4` and run the media optimizer. The scroll timeline uses the chapter ranges in `src/data/filmChapters.ts`.

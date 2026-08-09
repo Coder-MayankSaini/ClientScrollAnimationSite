@@ -35,7 +35,7 @@ function StaticHero() {
   return (
     <section className="film-scroll film-scroll--static" id="home" data-section="home" aria-labelledby="hero-title">
       <div className="film-stage film-stage--static">
-        <img className="static-hero-image" src="/videos/scroll-film/fullvideo-poster.jpg" alt="Mohit Ladhotiya in a dark jacket" />
+        <img className="static-hero-image" src="/videos/scroll-film/fullvideo-poster-v2.jpg" alt="Mohit Ladhotiya in a dark jacket" />
         <div className="film-vignette" aria-hidden="true" />
         <HeroCopy />
       </div>
@@ -116,7 +116,7 @@ function MobileFilm({ onProgress }: ScrollFilmProps) {
   return (
     <section className="film-scroll film-scroll--mobile" id="home" data-section="home" aria-labelledby="hero-title">
       <div className="film-stage film-stage--mobile">
-        <img className="film-poster" src="/videos/scroll-film/fullvideo-poster.jpg" alt="" aria-hidden="true" />
+        <img className="film-poster" src="/videos/scroll-film/fullvideo-poster-v2.jpg" alt="" aria-hidden="true" />
         <video
           ref={videoRef}
           className={`film-video-source film-video-source--mobile${loaded ? " film-video-source--ready" : ""}`}
@@ -124,10 +124,10 @@ function MobileFilm({ onProgress }: ScrollFilmProps) {
           muted
           playsInline
           preload="auto"
-          poster="/videos/scroll-film/fullvideo-poster.jpg"
+          poster="/videos/scroll-film/fullvideo-poster-v2.jpg"
           aria-hidden="true"
         >
-          <source src="/videos/scroll-film/fullvideo-mobile.mp4" type="video/mp4" />
+          <source src="/videos/scroll-film/fullvideo-mobile-v2.mp4" type="video/mp4" />
         </video>
         <div className="film-vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
@@ -331,9 +331,9 @@ export function ScrollFilm({ onProgress }: ScrollFilmProps) {
   return (
     <section className="film-scroll" id="home" data-section="home" ref={rootRef} aria-labelledby="hero-title">
       <div className="film-stage" ref={stageRef}>
-        <img className="film-poster" src="/videos/scroll-film/fullvideo-poster.jpg" alt="" aria-hidden="true" />
-        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="none" poster="/videos/scroll-film/fullvideo-poster.jpg" aria-hidden="true">
-          <source src="/videos/scroll-film/fullvideo-web.mp4" type="video/mp4" />
+        <img className="film-poster" src="/videos/scroll-film/fullvideo-poster-v2.jpg" alt="" aria-hidden="true" />
+        <video ref={videoRef} className={`film-video-source${loaded ? " film-video-source--ready" : ""}`} muted playsInline preload="none" poster="/videos/scroll-film/fullvideo-poster-v2.jpg" aria-hidden="true">
+          <source src="/videos/scroll-film/fullvideo-web-v2.mp4" type="video/mp4" />
         </video>
         <div className="film-vignette" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />

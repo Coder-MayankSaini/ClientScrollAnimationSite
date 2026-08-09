@@ -33,7 +33,7 @@ Invoke-Ffmpeg @(
   "-pix_fmt", "yuv420p", "-profile:v", "main", "-g", "15",
   "-keyint_min", "15", "-sc_threshold", "0", "-bf", "0",
   "-movflags", "+faststart",
-  (Join-Path $videoDirectory "fullvideo-web.mp4")
+  (Join-Path $videoDirectory "fullvideo-web-v2.mp4")
 )
 
 Invoke-Ffmpeg @(
@@ -44,7 +44,7 @@ Invoke-Ffmpeg @(
   "-pix_fmt", "yuv420p", "-profile:v", "main", "-g", "15",
   "-keyint_min", "15", "-sc_threshold", "0", "-bf", "0",
   "-movflags", "+faststart",
-  (Join-Path $videoDirectory "fullvideo-mobile.mp4")
+  (Join-Path $videoDirectory "fullvideo-mobile-v2.mp4")
 )
 
 Invoke-Ffmpeg @(
@@ -52,7 +52,7 @@ Invoke-Ffmpeg @(
   "-i", $videoSource,
   "-vf", "scale=1280:-2:force_original_aspect_ratio=decrease",
   "-frames:v", "1", "-q:v", "2", "-an", "-map_metadata", "-1",
-  (Join-Path $videoDirectory "fullvideo-poster.jpg")
+  (Join-Path $videoDirectory "fullvideo-poster-v2.jpg")
 )
 
 $previewDirectory = Join-Path $projectRoot "public\music\previews"
