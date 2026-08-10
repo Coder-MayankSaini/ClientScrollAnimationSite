@@ -110,6 +110,7 @@ temp/
 *.tmp
 *.bak
 *.orig
+mobile_video.mp4
 
 # ============================================
 # Package Managers (lock files are committed)

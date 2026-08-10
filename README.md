@@ -28,15 +28,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/optimize-images.ps1
 
 To replace an image, update the source file in `Pictures/`, rerun the optimizer, and keep the public filename mapped in the relevant data file.
 
-The source scroll film is `shorted_video.mp4` in the project root. The media optimizer creates the web, mobile, and first-frame poster files served from `public/videos/scroll-film/`:
+The desktop source scroll film is `shorted_video.mp4` in the project root. The mobile source is `mobile_video.mp4` and is kept local because the optimized output is the deployable asset. The media optimizer creates the web, mobile, and first-frame poster files served from `public/videos/scroll-film/`:
 
 ```text
 fullvideo-web-v2.mp4
-fullvideo-mobile-v2.mp4
+fullvideo-mobile-v3.mp4
+fullvideo-mobile-poster-v3.jpg
 fullvideo-poster-v2.jpg
 ```
 
-To replace the film, replace `shorted_video.mp4` and run the media optimizer. The scroll timeline uses the chapter ranges in `src/data/filmChapters.ts`.
+To replace the film, replace `shorted_video.mp4` and/or `mobile_video.mp4`, then run the media optimizer. The mobile film plays once and holds its final frame. The scroll timeline uses the chapter ranges in `src/data/filmChapters.ts`.
 
 Audio source files remain in `music/`; the site serves only the generated 30-second, 128 kbps previews from `public/music/previews/`. After replacing the source film or songs, regenerate those assets with:
 

@@ -21,7 +21,12 @@ function Invoke-Ffmpeg {
 }
 
 $videoSource = Join-Path $projectRoot "shorted_video.mp4"
+$mobileVideoSource = Join-Path $projectRoot "mobile_video.mp4"
 $videoDirectory = Join-Path $projectRoot "public\videos\scroll-film"
+
+if (-not (Test-Path -LiteralPath $mobileVideoSource)) {
+  throw "mobile_video.mp4 is required for the mobile film. Place the source in the project root and run this script again."
+}
 
 # The film is scrubbed frame-by-frame, so keep keyframes frequent while using
 # inter-frame compression. The muted background does not need an audio stream.
@@ -38,20 +43,28 @@ Invoke-Ffmpeg @(
 
 Invoke-Ffmpeg @(
   "-y", "-hide_banner", "-loglevel", "warning",
-  "-i", $videoSource,
-  "-vf", "scale=704:396",
-  "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "25",
-  "-pix_fmt", "yuv420p", "-profile:v", "main", "-g", "15",
-  "-keyint_min", "15", "-sc_threshold", "0", "-bf", "0",
+  "-i", $mobileVideoSource,
+  "-vf", "scale=720:1280:flags=lanczos",
+  "-an", "-c:v", "libx264", "-preset", "slow", "-crf", "22",
+  "-pix_fmt", "yuv420p", "-profile:v", "main", "-level", "3.1", "-g", "60",
+  "-keyint_min", "60", "-sc_threshold", "0", "-bf", "2",
   "-movflags", "+faststart",
-  (Join-Path $videoDirectory "fullvideo-mobile-v2.mp4")
+  (Join-Path $videoDirectory "fullvideo-mobile-v3.mp4")
+)
+
+Invoke-Ffmpeg @(
+  "-y", "-hide_banner", "-loglevel", "warning",
+  "-i", $mobileVideoSource,
+  "-vf", "scale=720:1280:flags=lanczos",
+  "-frames:v", "1", "-update", "1", "-q:v", "3", "-an", "-map_metadata", "-1",
+  (Join-Path $videoDirectory "fullvideo-mobile-poster-v3.jpg")
 )
 
 Invoke-Ffmpeg @(
   "-y", "-hide_banner", "-loglevel", "warning",
   "-i", $videoSource,
   "-vf", "scale=1280:-2:force_original_aspect_ratio=decrease",
-  "-frames:v", "1", "-q:v", "2", "-an", "-map_metadata", "-1",
+  "-frames:v", "1", "-update", "1", "-q:v", "2", "-an", "-map_metadata", "-1",
   (Join-Path $videoDirectory "fullvideo-poster-v2.jpg")
 )
 
