@@ -61,6 +61,7 @@ function HeroCopy() {
 
 function MobileFilm({ onProgress }: ScrollFilmProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playbackEndedRef = useRef(false);
   const [loaded, setLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
 
@@ -69,9 +70,11 @@ function MobileFilm({ onProgress }: ScrollFilmProps) {
     if (!video) return;
 
     let mounted = true;
+    playbackEndedRef.current = false;
     video.loop = false;
+    video.removeAttribute("loop");
     const tryToPlay = () => {
-      if (!mounted) return;
+      if (!mounted || playbackEndedRef.current || video.ended) return;
       void video.play().catch(() => {
         // Muted autoplay is supported by current mobile browsers. If a
         // browser still blocks it, the poster remains visible as a fallback.
@@ -81,8 +84,13 @@ function MobileFilm({ onProgress }: ScrollFilmProps) {
       if (mounted) setLoaded(true);
       tryToPlay();
     };
-    const onEnded = () => {
-      if (!mounted) return;
+    const holdFinalFrame = () => {
+      if (!mounted || playbackEndedRef.current) return;
+
+      // Some mobile browsers emit canplay again when the final-frame seek
+      // completes. Mark the one-shot playback as finished before seeking so
+      // those events cannot call play() and start the clip over.
+      playbackEndedRef.current = true;
 
       // Keep the final decoded frame visible instead of allowing the element
       // to fall back to its poster after the one-shot playback completes.
@@ -92,6 +100,18 @@ function MobileFilm({ onProgress }: ScrollFilmProps) {
       }
       onProgress?.(1);
     };
+    const onEnded = () => {
+      holdFinalFrame();
+    };
+    const onTimeUpdate = () => {
+      if (!mounted || playbackEndedRef.current) return;
+
+      // Stop just before the ended event as a fallback for browsers that
+      // briefly restart autoplay while dispatching end-of-media events.
+      if (Number.isFinite(video.duration) && video.duration > 0 && video.currentTime >= video.duration - 0.05) {
+        holdFinalFrame();
+      }
+    };
     const onError = () => {
       if (mounted) setVideoError(true);
     };
@@ -100,6 +120,7 @@ function MobileFilm({ onProgress }: ScrollFilmProps) {
     video.addEventListener("loadeddata", onLoaded);
     video.addEventListener("canplay", onLoaded);
     video.addEventListener("ended", onEnded);
+    video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("error", onError);
     tryToPlay();
 
@@ -110,6 +131,7 @@ function MobileFilm({ onProgress }: ScrollFilmProps) {
       video.removeEventListener("loadeddata", onLoaded);
       video.removeEventListener("canplay", onLoaded);
       video.removeEventListener("ended", onEnded);
+      video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("error", onError);
     };
   }, [onProgress]);
